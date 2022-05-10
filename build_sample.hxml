@@ -1,0 +1,8 @@
+-debug
+-lib hlsdl
+-lib heaps
+# -D glyphme.drawPack // used to debug the atlas
+-cp test
+-m Sample
+
+-hl out\test.hl
