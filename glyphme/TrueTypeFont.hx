@@ -58,13 +58,15 @@ class TrueTypeFont extends h2d.Font {
 
 	/** Generates an atlas of glyphs for all code points in given input strings.
 	 * Overrides the previous atlas. If you're just using this to display 
-	 * static text (which is what this wass meant for) you can just pass the text
+	 * static text (which is what this was meant for) you can just pass the text
 	 * directly. This function is very slow with large amounts of input but it 
 	 * should work when calling from a background thread... but I don't know 
 	 * anything about thread safety. :) */
 	public function generateAtlas(parameters:TrueTypeFontGenerationParameters, strings:Array<String>) {
 		if (tile != null)
 			tile.dispose();
+
+		glyphs.clear();
 
 		final atlasSize = parameters.atlasSize;
 		final atlas = Pixels.alloc(atlasSize, atlasSize, RGBA); // used again later
