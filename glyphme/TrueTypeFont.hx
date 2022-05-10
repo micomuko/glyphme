@@ -1,5 +1,6 @@
 package glyphme;
 
+import h2d.Font;
 import h2d.Tile;
 import hxd.Pixels;
 import h2d.Font.FontChar;
@@ -19,7 +20,7 @@ class TrueTypeFont extends h2d.Font {
 	public var descent:Float;
 	public var lineGap:Float;
 
-	public function new(infos:Array<TrueTypeFontInfo>, sizeInPixels:Int) {
+	public function new(infos:Array<TrueTypeFontInfo>, sizeInPixels:Int, alphaCutOff:Float, smoothing:Float) {
 		this.infos = infos;
 
 		final first = infos[0];
@@ -30,11 +31,12 @@ class TrueTypeFont extends h2d.Font {
 		descent = first.descent * scale;
 		lineGap = first.lineGap * scale;
 
-		super("", sizeInPixels, h2d.Font.FontType.SignedDistanceField(Red, .5, -1));
+		super(null, sizeInPixels, h2d.Font.FontType.SignedDistanceField(Red, alphaCutOff, smoothing));
 
 		// HELP: I feel like these are wrong but they look right on the fonts that i have tested
 		super.lineHeight = ascent - lineGap;
 		super.baseLine = ascent;
+		super.tile = @:privateAccess new Tile(null, 0, 0, 0, 0); // to avoid null access
 	}
 
 	/** Fallbacks are used to look up glyphs from multiple fonts. When a glyph is not found
@@ -180,6 +182,31 @@ class TrueTypeFont extends h2d.Font {
 			throw new haxe.Exception('Couldn\'t pack font, please increase atlasSize');
 
 		tile.getTexture().uploadPixels(atlas);
+	}
+
+	public override function clone():Font {
+		final f = new TrueTypeFont(infos.copy(), size, 0, 0);
+		f.baseLine = baseLine;
+		f.lineHeight = lineHeight;
+		f.tile = tile.clone();
+		f.charset = charset;
+		f.defaultChar = defaultChar.clone();
+		f.type = type;
+		for (g in glyphs.keys()) {
+			var c = glyphs.get(g);
+			var c2 = c.clone();
+			if (c == defaultChar)
+				f.defaultChar = c2;
+			f.glyphs.set(g, c2);
+		}
+
+		f.infos = infos.copy();
+		f.scaleMode = scaleMode;
+		f.ascent = ascent;
+		f.descent = descent;
+		f.lineGap = lineGap;
+
+		return f;
 	}
 
 	function generateGlyph(code:Int, info:TrueTypeFontInfo, p:TrueTypeFontGenerationParameters):TrueTypeFontGlyphInfo {

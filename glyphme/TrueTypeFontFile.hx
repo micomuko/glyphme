@@ -52,6 +52,6 @@ class TrueTypeFontFile {
 	}
 
 	public function toTrueTypeFont(sizeInPixels:Int, alphaCutoff:Float = 0.5, smoothing:Float = -1):TrueTypeFont {
-		return new TrueTypeFont(getInfos(), sizeInPixels);
+		return new TrueTypeFont(getInfos(), sizeInPixels, alphaCutoff, smoothing);
 	}
 }
