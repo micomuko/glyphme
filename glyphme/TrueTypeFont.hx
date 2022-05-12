@@ -66,6 +66,9 @@ class TrueTypeFont extends h2d.Font {
 		if (tile != null)
 			tile.dispose();
 
+		// adjusting scale in case we generate at a different size
+		final ratio = size / parameters.fontHeightInPixels;
+
 		glyphs.clear();
 
 		final atlasSize = parameters.atlasSize;
@@ -153,7 +156,14 @@ class TrueTypeFont extends h2d.Font {
 					if (height > maxHeightThisRow)
 						maxHeightThisRow = height;
 
-					glyphs[g.codePoint].t = tile.sub(x, y, width, height, g.offsetX, g.offsetY + ascent);
+					final dx = g.offsetX * ratio;
+					final dy = (g.offsetY + ascent / ratio) * ratio;
+					final t = tile.sub(x, y, width, height, dx, dy);
+					t.scaleToSize(ratio * width, ratio * height);
+
+					final char = glyphs[g.codePoint];
+					char.width *= ratio;
+					char.t = t;
 
 					// drawing and creating char tile
 					@:privateAccess {
@@ -212,7 +222,7 @@ class TrueTypeFont extends h2d.Font {
 	}
 
 	function generateGlyph(code:Int, info:TrueTypeFontInfo, p:TrueTypeFontGenerationParameters):TrueTypeFontGlyphInfo {
-		final scale = getScaleForPixelHeight(info, size);
+		final scale = getScaleForPixelHeight(info, p.fontHeightInPixels);
 		final g:TrueTypeFontGlyphInfo = cast GlyphMeNative.getGlyph(code, info.stbttFontInfo, scale, p.padding, p.onEdgeValue, p.pixelDistScale);
 		if (g != null)
 			g.fontInfo = info;
@@ -276,6 +286,8 @@ typedef TrueTypeFontGlyphInfo = GlyphInfo & {fontInfo:TrueTypeFontInfo}
 class TrueTypeFontGenerationParameters {
 	public var atlasSize:Int;
 
+	public var fontHeightInPixels:Int;
+
 	/** extra pixels around the character which are filled with the distance to the character (not 0) */
 	public var padding:Int = 2;
 
@@ -290,7 +302,6 @@ class TrueTypeFontGenerationParameters {
 /**
  * Choose how you want to define scale. I think heaps normally uses Ascent (how much the characters ascend above the baseline).
  * Or you could define it to include descent as well, stbtt does this by default. And I think it works better when using fallbacks as well.
- * stbtt does this by default:
  */
 enum TrueTypeFontScaleMode {
 	/**
