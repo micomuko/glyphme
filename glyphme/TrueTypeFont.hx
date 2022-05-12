@@ -93,7 +93,7 @@ class TrueTypeFont extends h2d.Font {
 					g = generateGlyph(code, info, parameters);
 					if (g != null) {
 						// HELP: will defaultChar.t cause a new drawcall since it's not on the atlas?
-						final char = new TrueTypeFontChar(this, g.fontInfo, g.index, defaultChar.t, g.advanceX);
+						final char = new TrueTypeFontChar(this, g.fontInfo, g.index, defaultChar.t, g.advanceX * ratio);
 						glyphs[g.codePoint] = char;
 
 						// space bar for example has no pixels, but still has advanceX
@@ -162,7 +162,6 @@ class TrueTypeFont extends h2d.Font {
 					t.scaleToSize(ratio * width, ratio * height);
 
 					final char = glyphs[g.codePoint];
-					char.width *= ratio;
 					char.t = t;
 
 					// drawing and creating char tile
