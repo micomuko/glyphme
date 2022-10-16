@@ -34,7 +34,6 @@ class TrueTypeFont extends h2d.Font {
 
 		super(null, sizeInPixels, h2d.Font.FontType.SignedDistanceField(Red, alphaCutOff, smoothing));
 
-		// HELP: I feel like these are wrong but they look right on the fonts that i have tested
 		super.lineHeight = ascent - lineGap;
 		super.baseLine = ascent;
 		super.tile = @:privateAccess new Tile(null, 0, 0, 0, 0); // to avoid null access
@@ -83,7 +82,7 @@ class TrueTypeFont extends h2d.Font {
 			packed:Bool
 		}> = [];
 
-		strings.unshift(parameters.unresolvedChar); // always generate this
+		strings.unshift(parameters.unresolvedChar + "?"); // always generate this
 		for (string in strings) {
 			for (stringIndex in 0...string.length) {
 				final code = string.charCodeAt(stringIndex);
@@ -115,7 +114,12 @@ class TrueTypeFont extends h2d.Font {
 		}
 
 		// replacing unresolved
-		final unresolvedCode = parameters.unresolvedChar.charCodeAt(0);
+		var unresolvedCode = parameters.unresolvedChar.charCodeAt(0);
+		if (glyphs[unresolvedCode] == null) {
+			trace('Could not resolve unresolvedChar ${parameters.unresolvedChar}, using "?" instead. Choose one you are sure is resolvable or add a fallback. ');
+			unresolvedCode = "?".code;
+		}
+
 		for (string in strings) {
 			for (stringIndex in 0...string.length) {
 				final code = string.charCodeAt(stringIndex);
@@ -253,8 +257,17 @@ class TrueTypeFont extends h2d.Font {
 		f.ascent = ascent;
 		f.descent = descent;
 		f.lineGap = lineGap;
+		f.lastGenerationParameters = lastGenerationParameters;
 
 		return f;
+	}
+
+	public override function resizeTo(size:Int) {
+		final ratio = size / initSize;
+		super.resizeTo(size);
+		ascent = ascent * ratio;
+		descent = descent * ratio;
+		lineGap = lineGap * ratio;
 	}
 
 	function generateGlyph(code:Int, info:TrueTypeFontInfo, p:TrueTypeFontGenerationParameters):TrueTypeFontGlyphInfo {
@@ -320,7 +333,7 @@ typedef TrueTypeFontGlyphInfo = GlyphInfo & {fontInfo:TrueTypeFontInfo}
 @:structInit
 class TrueTypeFontGenerationParameters {
 	/** character to use instead if the glyph cannot be resolved */
-	public var unresolvedChar = "□";
+	public var unresolvedChar = "?";
 
 	/** If true, will double atlasSize until all glyphs fit. (SLOW) **/
 	public var autoFit = true;
