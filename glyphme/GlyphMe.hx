@@ -3,6 +3,12 @@ package glyphme;
 import hl.Bytes;
 
 class GlyphMe {
+	/** After regenerating atlas, call this on h2d.Text instances still using this font. */
+	public static function refreshText(font:TrueTypeFont, text:h2d.Text) @:privateAccess {
+		text.glyphs.tile = font.tile;
+		text.needsRebuild = true;
+	}
+
 	/** Allows you to load a font files' fontInfos without creating a specific TrueTypeFont instance.
 	 * You could use these as fallbacks for a specific instance or for whatever you want. */
 	public static function loadTrueTypeFontFile(path:String) {
