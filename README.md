@@ -2,7 +2,6 @@
 
 Very half-assed TTF support for heaps using [stb_truetype](https://github.com/nothings/stb).
 I have never written any c/c++ code, bindings or font/text related code, so I don't really know what I'm doing.
-If you search for "HELP" in the project, you'll find some spots where I'd need help in particular.
 Other than that, this works for me and as I'm busy with my own project I won't be improving this too much.
 Feel free to fork this or whatever and make it better. Right now it only renders glyphs and uses heaps to do the 
 actual text layout stuff. There is no text shaping, ligatures or anything fancy. 

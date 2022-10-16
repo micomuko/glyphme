@@ -19,6 +19,7 @@ class TrueTypeFont extends h2d.Font {
 	public var ascent:Float;
 	public var descent:Float;
 	public var lineGap:Float;
+	public var lastGenerationParameters:TrueTypeFontGenerationParameters;
 
 	public function new(infos:Array<TrueTypeFontInfo>, sizeInPixels:Int, alphaCutOff:Float, smoothing:Float) {
 		this.infos = infos;
@@ -59,40 +60,41 @@ class TrueTypeFont extends h2d.Font {
 	/** Generates an atlas of glyphs for all code points in given input strings.
 	 * Overrides the previous atlas. If you're just using this to display 
 	 * static text (which is what this was meant for) you can just pass the text
-	 * directly. This function is very slow with large amounts of input but it 
+	 * directly. If parameters == null, the last used parameters are used 
+	 * Useful if you want to keep font size and all that but need to display 
+	 * a different set of stings). 
+	 * This function is pretty slow with large amounts of input but it 
 	 * should work when calling from a background thread... but I don't know 
-	 * anything about thread safety. :) */
+	 * anything about thread safety. */
 	public function generateAtlas(parameters:TrueTypeFontGenerationParameters, strings:Array<String>) {
-		if (tile != null)
-			tile.dispose();
+		if (parameters == null) {
+			if (lastGenerationParameters == null)
+				throw new haxe.Exception('Could not regenerate atlas with the current generation parameters because they are null.');
+			parameters = lastGenerationParameters;
+		}
 
 		// adjusting scale in case we generate at a different size
 		final ratio = size / parameters.fontHeightInPixels;
 
 		glyphs.clear();
-
-		final atlasSize = parameters.atlasSize;
-		final atlas = Pixels.alloc(atlasSize, atlasSize, RGBA); // used again later
-		tile = Tile.fromPixels(atlas);
-
 		final pack:Array<{
 			char:FontChar,
 			g:TrueTypeFontGlyphInfo,
 			packed:Bool
 		}> = [];
 
+		strings.unshift(parameters.unresolvedChar); // always generate this
 		for (string in strings) {
 			for (stringIndex in 0...string.length) {
 				final code = string.charCodeAt(stringIndex);
 
 				var g:TrueTypeFontGlyphInfo = null;
 				for (info in infos) {
-					if (glyphs[code] != null)
+					if (glyphs[code] != null) // skip duplicates
 						continue;
 
 					g = generateGlyph(code, info, parameters);
 					if (g != null) {
-						// HELP: will defaultChar.t cause a new drawcall since it's not on the atlas?
 						final char = new TrueTypeFontChar(this, g.fontInfo, g.index, defaultChar.t, g.advanceX * ratio);
 						glyphs[g.codePoint] = char;
 
@@ -112,14 +114,28 @@ class TrueTypeFont extends h2d.Font {
 			}
 		}
 
+		// replacing unresolved
+		final unresolvedCode = parameters.unresolvedChar.charCodeAt(0);
+		for (string in strings) {
+			for (stringIndex in 0...string.length) {
+				final code = string.charCodeAt(stringIndex);
+				if (glyphs[code] == null && code != "\t".code && code != "\r".code && code != "\n".code && glyphs[code] == null)
+					glyphs[code] = glyphs[unresolvedCode];
+			}
+		}
+
+		final length = pack.length;
+
 		pack.sort((c1, c2) -> c2.g.height - c1.g.height); // sorting tall to small
 
 		// row packing the glyphs and drawing to atlas
-		final brush = new Pixels(0, 0, null, RGBA);
-		final length = pack.length;
+		var atlas:Pixels;
+		var brush = new Pixels(0, 0, null, RGBA);
 
-		// returns the number this function call packed
+		// returns the number of glyphs this function call packed
 		function tryToPack(index:Int, originX:Int, originY:Int, bounds:Int) {
+			final atlasSize = parameters.atlasSize;
+
 			var numberPacked = 0;
 			var x = originX;
 			var y = originY;
@@ -188,11 +204,32 @@ class TrueTypeFont extends h2d.Font {
 			return numberPacked;
 		}
 
-		final numberPacked = tryToPack(0, 0, 0, atlasSize);
-		if (numberPacked != length)
-			throw new haxe.Exception('Couldn\'t pack font, please increase atlasSize');
+		while (true) {
+			final atlasSize = parameters.atlasSize;
+
+			atlas = Pixels.alloc(atlasSize, atlasSize, RGBA);
+			tile = Tile.fromPixels(atlas);
+
+			final numberPacked = tryToPack(0, 0, 0, atlasSize);
+			final numberNotPacked = length - numberPacked;
+
+			for (e in pack)
+				e.packed = false;
+
+			if (numberNotPacked != 0) {
+				if (parameters.autoFit) {
+					parameters.atlasSize *= 2;
+					continue;
+				} else {
+					throw new haxe.Exception('Couldn\'t pack $numberNotPacked glyphs for font: $name, please increase atlasSize or enable autoFit.');
+				}
+			}
+
+			break;
+		}
 
 		tile.getTexture().uploadPixels(atlas);
+		lastGenerationParameters = parameters;
 	}
 
 	public override function clone():Font {
@@ -281,9 +318,15 @@ class TrueTypeFontChar extends h2d.Font.FontChar {
 typedef TrueTypeFontGlyphInfo = GlyphInfo & {fontInfo:TrueTypeFontInfo}
 
 @:structInit
-// HELP: find better default parameters
 class TrueTypeFontGenerationParameters {
-	public var atlasSize:Int;
+	/** character to use instead if the glyph cannot be resolved */
+	public var unresolvedChar = "□";
+
+	/** If true, will double atlasSize until all glyphs fit. (SLOW) **/
+	public var autoFit = true;
+
+	/** the width and height of the atlas on which glyphs will be generated. . */
+	public var atlasSize = 1024;
 
 	public var fontHeightInPixels:Int;
 
