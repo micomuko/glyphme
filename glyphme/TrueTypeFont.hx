@@ -282,7 +282,7 @@ class TrueTypeFont extends h2d.Font {
 	public inline function getScaleForPixelHeight(info:TrueTypeFontInfo, height:Float) {
 		return switch (scaleMode) {
 			case Ascent:
-				height / info.ascent;
+				height / ( info.ascent - info.descent);
 			case AscentAndDescent:
 				height / (info.ascent + info.descent);
 			case Custom(getScale):
