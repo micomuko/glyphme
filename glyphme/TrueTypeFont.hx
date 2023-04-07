@@ -34,7 +34,7 @@ class TrueTypeFont extends h2d.Font {
 
 		super(null, sizeInPixels, h2d.Font.FontType.SignedDistanceField(Red, alphaCutOff, smoothing));
 
-		super.lineHeight = ascent - lineGap;
+		super.lineHeight = sizeInPixels;
 		super.baseLine = ascent;
 		super.tile = @:privateAccess new Tile(null, 0, 0, 0, 0); // to avoid null access
 	}
