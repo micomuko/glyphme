@@ -38,6 +38,16 @@ class TrueTypeFont extends h2d.Font {
 		super.baseLine = ascent;
 		super.tile = @:privateAccess new Tile(null, 0, 0, 0, 0); // to avoid null access
 	}
+	
+	private var __forceHasChar:Bool = false;
+
+	override function hasChar(code:Int):Bool {
+		if(code == Key.BACKSPACE) return false;
+		if(Key.isDown(Key.CTRL)) return false;
+		if (__forceHasChar)
+			return true;
+		return super.hasChar(code);
+	}
 
 	/** Fallbacks are used to look up glyphs from multiple fonts. When a glyph is not found
 	 * we try the next font. If you have multiple fallbacks with slightly overlapping glyph support
